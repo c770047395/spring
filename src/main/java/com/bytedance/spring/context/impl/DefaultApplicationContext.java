@@ -467,61 +467,100 @@ public class DefaultApplicationContext implements ApplicationContext {
 
     @Override
     public Object getBean(String beanName) throws Exception {
-        return null;
+        // 先尝试在一级缓存中获取
+        Object o = iocByName.get(beanName);
+        if(o != null) {
+            return o;
+        }
+        // 考虑可能是懒加载或者原型模式
+        BeanDefinition beanDefinition = allBeansByName.get(beanName);
+        if(beanDefinition == null) {
+            throw new NoSuchBeanException();
+        }
+        Object bean = createBean(beanDefinition);
+        if(beanDefinition.getSingleton()){
+            return iocByName.get(beanName);
+        }
+        return bean;
     }
 
     @Override
     public <T> T getBean(Class<T> beanType) throws Exception {
-        return null;
+        return (T) getBean(getNameByType(beanType));
     }
 
     @Override
     public <T> T getBean(String name, Class<T> beanType) throws Exception {
-        return null;
+        final Object o = getBean(name);
+        if (beanType.isInstance(o)) {
+            return (T) o;
+        } else {
+            throw new NoSuchBeanException();
+        }
     }
 
     @Override
     public Class<?> getType(String name) throws NoSuchBeanException {
-        return null;
+        if(allBeansByName.containsKey(name)){
+            return allBeansByName.get(name).getBeanClass();
+        }else{
+            throw new NoSuchBeanException();
+        }
     }
 
     @Override
     public <T> Map<String, T> getBeansOfType(Class<T> beanType) throws Exception {
-        return null;
+        Map<String, T> map = new HashMap<>();
+        for (String s : getNamesByType(beanType)) {
+            map.put(s, (T) getBean(s));
+        }
+        return map;
     }
 
     @Override
     public int getBeanDefinitionCount() {
-        return 0;
+        return beanDefinitions.size();
     }
 
     @Override
     public String[] getBeanDefinitionNames() {
-        return new String[0];
+        String[] result = new String[beanDefinitions.size()];
+        int i = 0;
+        for (BeanDefinition beanDefinition:beanDefinitions) {
+            result[i++] = beanDefinition.getBeanName();
+        }
+        return result;
     }
 
     @Override
     public boolean containsBean(String name) {
-        return false;
+        return allBeansByName.containsKey(name);
     }
 
     @Override
     public boolean containsBeanDefinition(String beanName) {
-        return false;
+        return allBeansByName.containsKey(beanName);
     }
 
     @Override
     public BeanDefinition getBeanDefinition(String beanName) throws NoSuchBeanException {
-        return null;
+        if(allBeansByName.containsKey(beanName)){
+            return allBeansByName.get(beanName);
+        }
+        throw new NoSuchBeanException();
     }
 
     @Override
     public BeanDefinition getBeanDefinition(String beanName, Class<?> beanType) throws NoSuchBeanException {
-        return null;
+        BeanDefinition beanDefinition = getBeanDefinition(beanName);
+        if (beanType.isAssignableFrom(beanDefinition.getBeanClass())) {
+            return beanDefinition;
+        }
+        throw new NoSuchBeanException();
     }
 
     @Override
     public BeanDefinition getBeanDefinition(Class<?> beanType) throws DuplicateBeanClassException, NoSuchBeanException {
-        return null;
+        return getBeanDefinition(getNameByType(beanType));
     }
 }
